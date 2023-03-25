@@ -3,6 +3,13 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+.mvn
+.idea
+mvnw
+mvnw.cmd
+sec-servic.iml
+.mvn/wrapper
+
 
 ### STS ###
 .apt_generated
