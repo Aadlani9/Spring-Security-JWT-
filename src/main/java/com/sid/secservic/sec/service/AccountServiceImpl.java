@@ -5,22 +5,33 @@ import com.sid.secservic.sec.entity.AppRole;
 import com.sid.secservic.sec.entity.AppUser;
 import com.sid.secservic.sec.repo.AppRoleRepository;
 import com.sid.secservic.sec.repo.AppUserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Service
 @Transactional
-@RequiredArgsConstructor
 @Slf4j
-public class AccountServiceImpl implements AccountService {
+public class AccountServiceImpl implements AccountService, UserDetailsService {
+
     private final AppUserRepository appUserRepo;
     private final AppRoleRepository appRoleRepo;
     private final PasswordEncoder passwordEncoder;
+
+    public AccountServiceImpl(AppUserRepository appUserRepo, AppRoleRepository appRoleRepo, PasswordEncoder passwordEncoder) {
+        this.appUserRepo = appUserRepo;
+        this.appRoleRepo = appRoleRepo;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
     public AppUser addNewUser(AppUser appUser) {
@@ -40,7 +51,7 @@ public class AccountServiceImpl implements AccountService {
         appUser.getAppRoles().add(appRole);
     }
     @Override
-    public AppUser loadUserByUsername(String username) {
+    public AppUser findUserByUsername(String username){
         return appUserRepo.findByUsername(username);
     }
 
@@ -48,4 +59,21 @@ public class AccountServiceImpl implements AccountService {
     public List<AppUser> listUsers() {
         return appUserRepo.findAll();
     }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        AppUser appUser = appUserRepo.findByUsername(username);
+        if (appUser == null) {
+            log.error("User not found in the database !!");
+            throw new UsernameNotFoundException("User not found in the database");
+        } else {
+            log.info("User found in the database : {}", username);
+        }
+        Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        appUser.getAppRoles().forEach(role -> {
+            authorities.add(new SimpleGrantedAuthority(role.getRoleName()));
+        });
+        return new org.springframework.security.core.userdetails.User(appUser.getUsername(), appUser.getPassword(), authorities);
+    }
+
 }
